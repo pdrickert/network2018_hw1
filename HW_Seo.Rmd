@@ -8,7 +8,7 @@ output: pdf_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(knitr)
-opts_chunk$set(tidy.opts=list(width.cutoff=55),tidy=TRUE)
+opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
 ```
 
 \section{Exercise 1. Nigeria Data}
@@ -77,7 +77,7 @@ par(mfrow=c(2, 2), mar=c(0,0.2,1,0.2))
 for(i in 1:4){
   g <- NULL
   g = graph_from_adjacency_matrix(as.matrix(network.mat[[i]]),
-                                mode='directed', weighted=TRUE)
+                                mode='directed', weighted=TRUE, diag=F)
   tiesSum = apply(g[], 1, sum)
 # condition size based on # of ties
   V(g)$size <- (tiesSum+0.5)*6
@@ -104,7 +104,7 @@ par(mfrow=c(2, 2), mar=c(0,0.2,1,0.2))
 for(i in 5:8){
   g <- NULL
   g = graph_from_adjacency_matrix(as.matrix(network.mat[[i]]),
-                                mode='directed', weighted=TRUE)
+                                mode='directed', weighted=TRUE,diag=F)
   tiesSum = apply(g[], 1, sum)
 # condition size based on # of ties
   V(g)$size <- (tiesSum+0.5)*6
@@ -128,7 +128,7 @@ par(mfrow=c(2, 2), mar=c(0,0.2,1,0.2))
 for(i in 9:12){
   g <- NULL
   g = graph_from_adjacency_matrix(as.matrix(network.mat[[i]]),
-                                mode='directed', weighted=TRUE)
+                                mode='directed', weighted=TRUE,diag=F)
   tiesSum = apply(g[], 1, sum)
 # condition size based on # of ties
   V(g)$size <- (tiesSum+0.5)*6
@@ -152,7 +152,7 @@ par(mfrow=c(2, 2), mar=c(0,0.2,1,0.2))
 for(i in 13:16){
   g <- NULL
   g = graph_from_adjacency_matrix(as.matrix(network.mat[[i]]),
-                                mode='directed', weighted=TRUE)
+                                mode='directed', weighted=TRUE,diag=F)
   tiesSum = apply(g[], 1, sum)
 # condition size based on # of ties
   V(g)$size <- (tiesSum+0.5)*6
@@ -177,7 +177,7 @@ for(i in 13:16){
 par(mfrow=c(2, 2), mar=c(0,0.2,1,0.2))
 g <- NULL
 g = graph_from_adjacency_matrix(as.matrix(network.mat[[17]]),
-                                mode='directed', weighted=TRUE)
+                                mode='directed', weighted=TRUE,diag=F)
 tiesSum = apply(g[], 1, sum)
 # condition size based on # of ties
 V(g)$size <- (tiesSum+0.5)*6
@@ -195,7 +195,7 @@ plot(g,main=paste("Year:", names(network.mat)[17]),
      layout=layout_with_fr)
 g <- NULL
 g = graph_from_adjacency_matrix(as.matrix(network.mat[[18]]),
-                                mode='directed', weighted=TRUE)
+                                mode='directed', weighted=TRUE,diag=F)
 tiesSum = apply(g[], 1, sum)
 # condition size based on # of ties
 V(g)$size <- tiesSum*1/2.5
@@ -216,26 +216,39 @@ plot(g,main=names(network.mat)[18],
 ```
 \section{Exercise 2. Measurements \& Community detection}
 \subsection{a}
-We can measure influence with the degree of nodes. For example, we can count total number of edges connected to a node to estimate the influence of an actor has on the network. By comparing network plot (above) and the actors who have the most degree (below), I am quite certain that I found an influential actor using degree. 
+We can measure influence with the degree of nodes. For example, we can count a total number of edges connected to a node to estimate the influence of an actor. By comparing network plot (above) and the degree (below), I am quite certain that I found an influential actor using degree. Additionally, I computed eigenvector centrality to find a node that is linked to other important nodes. When I compare actors who have the most degree and eigenvector centrality, they were almost the same. I report the most influential actor for each year and all years (in terms of the number of degree).
 
 ```{r degree, eval=T, echo=T, warning=F, message=F}
 # to find an influential actor for each year
+
+# create an empty list
 influence.actor <- vector("list",18)
 names(influence.actor) <- unique(nigeria$year)
-for(t in 1:18){
-  temp <- graph.adjacency(as.matrix(network.mat[[t]]))
-  degree <- degree(temp)
+eigen.actor <- vector("list",18)
+names(eigen.actor) <- unique(nigeria$year)
+# loop to find the maximum degree and eigenvector centrality
+for(t in 1:17){
+  temp <- graph.adjacency(as.matrix(network.mat[[t]]), mode='directed', weighted=TRUE,diag=F)
+  degree <- igraph::degree(temp)
+  eigen <- eigen_centrality(temp, directed=TRUE)$vector
+  names(eigen) <- as.character(gsub("\n", " ", names(eigen)))
   names(degree) <- as.character(gsub("\n", " ", names(degree)))
   influence.actor[[t]] <- degree[which(degree==max(degree))]
+  eigen.actor[[t]] <- eigen[which(eigen==max(eigen))]
 }
 # to find an influential actor overall
 names(influence.actor)[18] <- "All Conflict"
-temp <- graph.adjacency(as.matrix(network.mat[[18]]))
-degree <- degree(temp)
+names(eigen.actor)[18] <- "All Conflict"
+temp <- graph.adjacency(as.matrix(network.mat[[18]]),mode='directed', weighted=TRUE,diag=F)
+degree <- igraph::degree(temp)
+eigen <- eigen_centrality(temp, directed=TRUE)$vector
+names(eigen) <- as.character(gsub("\n", " ", names(eigen)))
 names(degree) <- as.character(gsub("\n", " ", names(degree)))
 influence.actor[[18]] <- degree[which(degree==max(degree))]
+eigen.actor[[18]] <- eigen[which(eigen==max(eigen))]
 
 influence.actor # for each year and all years
+eigen.actor[[18]] # for all years
 
 ```
 
@@ -264,7 +277,7 @@ plot(eclusts, hang=-1) # seems like there are 8 groups
 \section{Exercise 3. ERGMs}
 ```{r ergms, eval=T, echo=T, warning=F, message=F}
 library(statnet)
-# for 2004 data
+# for conflicts in 2004
 set.seed(688346)
 nigeria <- as.matrix(network.mat[[5]])
 nigeria <- as.network.matrix(nigeria)
